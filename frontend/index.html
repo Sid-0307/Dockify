@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="index.css" />
+
+    <title>Dockify</title>
+  </head>
+  <body>
+    <div class="titleDiv">
+      <h1>Dockify</h1>
+      <p class="subhead">Code smarter. Document faster.</p>
+      <!-- <p>Your one stop solution to auto-documenting.</p> -->
+    <div>
+    <div class="content">
+      <div class="inputDiv">
+        <input type="text" id="repoUrl" placeholder="Enter GitHub Repository URL" />
+        <p class="p-or">Or</p>
+        <input type="file" id="fileUpload" accept=".zip" />
+        <button id="generateBtn">Generate Doc</button>
+
+      </div>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+      const generateBtn = document.getElementById("generateBtn");
+const repoUrlInput = document.getElementById("repoUrl");
+const outputDiv = document.getElementById("output");
+const fileUpload = document.getElementById("fileUpload");
+ 
+generateBtn.addEventListener("click", async () => {
+  const repoUrl = repoUrlInput.value;
+  const file = fileUpload.files[0];
+  console.log("File", file, "Repo", repoUrl);
+
+  if (file && !file.name.endsWith('.zip')) {
+    outputDiv.textContent = "Please upload a ZIP file.";
+    return;
+  }
+  if (!repoUrl && !file) {
+    outputDiv.textContent = "Please enter a repository URL or zip file";
+    return;
+  }
+
+  outputDiv.textContent = "Generating documentation...";
+  try {
+    let response;
+    if (repoUrl) {
+      response = await fetch(
+        `http://localhost:8000/generate-docs?repo_url=${encodeURIComponent(repoUrl)}`,
+        {
+          method: "GET",
+        }
+      );
+    } else if (file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      response = await fetch(
+        'http://localhost:8000/upload-repo',
+        {
+          method: "POST",
+          body: formData
+        }
+      );
+    }
+
+    if (response.ok) {
+      const blob = await response.blob();
+     
+      const url = window.URL.createObjectURL(blob);
+     
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'documentation.md';
+     
+      document.body.appendChild(a);
+      a.click();
+     
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+     
+      outputDiv.textContent = "Documentation downloaded successfully!";
+    } else {
+      const errorText = await response.text();
+      outputDiv.textContent = `Error generating documentation: ${errorText}`;
+    }
+  } catch (error) {
+    outputDiv.textContent = "Failed to connect to the server.";
+    console.error(error);
+  }
+});
+    </script>
+  </body>
+</html>
